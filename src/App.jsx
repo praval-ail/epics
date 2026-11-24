@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import * as pdfjsLib from 'pdfjs-dist'
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import {
   ArrowLeft,
   ArrowRight,
@@ -23,12 +25,19 @@ import { mockCatalog } from './data/catalog'
 import { textbookApi } from './services/api'
 import './App.css'
 
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker
+
 const navItems = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'explore', label: 'Explore Books', icon: Library },
   { id: 'learning', label: 'My Learning', icon: BookOpen },
   { id: 'progress', label: 'Progress', icon: PieChart },
 ]
+
+function getGradeFromClassName(className) {
+  const match = className?.match(/\d+/)
+  return match ? Number(match[0]) : 6
+}
 
 function Logo() {
   return (
@@ -89,7 +98,7 @@ function Header({ setOpen }) {
 function HomePage({ setPage, setSelectedChapter, setReaderOpen }) {
   const recent = mockCatalog[0].subjects[0].chapters
   const openChapter = (chapter) => {
-    setSelectedChapter(chapter)
+    setSelectedChapter({ ...chapter, grade: getGradeFromClassName(mockCatalog[0].name) })
     setReaderOpen(true)
   }
 
@@ -313,7 +322,11 @@ function ExplorePage({ setSelectedChapter, setReaderOpen }) {
                     <p>{chapter.description}</p>
                   </div>
                   <button type="button" className="open-button" onClick={() => {
-                    setSelectedChapter({ ...chapter, pdfUrl: textbookApi.getPdfUrl(chapter.id) })
+                    setSelectedChapter({
+                      ...chapter,
+                      grade: getGradeFromClassName(selectedClass?.name),
+                      pdfUrl: textbookApi.getPdfUrl(chapter.id),
+                    })
                     setReaderOpen(true)
                   }}>
                     <BookOpen size={17} /> Open
@@ -331,7 +344,14 @@ function ExplorePage({ setSelectedChapter, setReaderOpen }) {
 }
 
 function LearningPage({ setSelectedChapter, setReaderOpen }) {
-  const chapters = mockCatalog.flatMap((item) => item.subjects.flatMap((subject) => subject.chapters))
+  const chapters = mockCatalog.flatMap((item) =>
+    item.subjects.flatMap((subject) =>
+      subject.chapters.map((chapter) => ({
+        ...chapter,
+        grade: getGradeFromClassName(item.name),
+      })),
+    ),
+  )
   return (
     <main className="page">
       <div className="page-heading"><div><span className="eyebrow">YOUR LIBRARY</span><h1>My learning</h1></div></div>
@@ -369,10 +389,136 @@ function ProgressPage() {
   )
 }
 
+function PdfDocument({ url, title }) {
+  const pagesRef = useRef(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    let loadingTask
+    let renderTask
+    const pages = pagesRef.current
+    if (!pages) return
+    pages.replaceChildren()
+    setLoading(true)
+    setError('')
+
+    const renderPdf = async () => {
+      try {
+        loadingTask = pdfjsLib.getDocument(url)
+        const document = await loadingTask.promise
+        for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+          const page = await document.getPage(pageNumber)
+          if (cancelled) return
+
+          const baseViewport = page.getViewport({ scale: 1 })
+          const scale = Math.min(1.5, Math.max(320, pages.clientWidth - 32) / baseViewport.width)
+          const viewport = page.getViewport({ scale })
+          const canvas = window.document.createElement('canvas')
+          const context = canvas.getContext('2d')
+          if (!context) throw new Error('This browser could not render the PDF page.')
+
+          canvas.width = Math.ceil(viewport.width)
+          canvas.height = Math.ceil(viewport.height)
+          canvas.setAttribute('role', 'img')
+          canvas.setAttribute('aria-label', `${title}, page ${pageNumber}`)
+          pages.appendChild(canvas)
+
+          renderTask = page.render({ canvasContext: context, viewport })
+          await renderTask.promise
+          if (cancelled) return
+        }
+        setLoading(false)
+      } catch (reason) {
+        if (cancelled) return
+        pages.replaceChildren()
+        setError(reason instanceof Error ? reason.message : String(reason))
+        setLoading(false)
+      }
+    }
+
+    renderPdf()
+    return () => {
+      cancelled = true
+      if (renderTask) renderTask.cancel()
+      if (loadingTask) {
+        void loadingTask.destroy().catch((reason) => {
+          console.error('Could not release the PDF document', reason)
+        })
+      }
+      pages.replaceChildren()
+    }
+  }, [url, title])
+
+  return (
+    <section className="pdf-reader" aria-label={`${title} textbook PDF`}>
+      {loading && <div className="pdf-loading" aria-live="polite">Loading chapter PDF...</div>}
+      {error && (
+        <div className="api-state error-state">
+          <strong>The PDF could not be loaded</strong>
+          <p>{error}</p>
+        </div>
+      )}
+      <div className="pdf-pages" ref={pagesRef} />
+    </section>
+  )
+}
+
 function Reader({ chapter, setReaderOpen, setPage }) {
   const [helpOpen, setHelpOpen] = useState(false)
   const [simplified, setSimplified] = useState(false)
-  const [pdfFailed, setPdfFailed] = useState(false)
+  const initialGrade = Number(chapter.grade)
+  const [knowledgeGrade, setKnowledgeGrade] = useState(() => (
+    Number.isInteger(initialGrade) && initialGrade >= 1 && initialGrade <= 12 ? initialGrade : 6
+  ))
+  const [preferenceReady, setPreferenceReady] = useState(false)
+  const [preferenceStatus, setPreferenceStatus] = useState('loading')
+  const [preferenceError, setPreferenceError] = useState('')
+  const userChangedLevel = useRef(false)
+
+  useEffect(() => {
+    let active = true
+    textbookApi.getUnderstandingLevel()
+      .then(({ value }) => {
+        if (!active) return
+        if (value !== null && !userChangedLevel.current) setKnowledgeGrade(value)
+        setPreferenceStatus(userChangedLevel.current ? 'pending' : 'idle')
+      })
+      .catch((reason) => {
+        if (!active) return
+        setPreferenceError(`Could not load the saved level: ${reason.message}`)
+        setPreferenceStatus('error')
+      })
+      .finally(() => {
+        if (active) setPreferenceReady(true)
+      })
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    if (!preferenceReady || !userChangedLevel.current) return
+    const timer = setTimeout(async () => {
+      setPreferenceStatus('saving')
+      setPreferenceError('')
+      try {
+        await textbookApi.setUnderstandingLevel(knowledgeGrade)
+        setPreferenceStatus('saved')
+      } catch (reason) {
+        setPreferenceError(`Could not save the selected level: ${reason.message}`)
+        setPreferenceStatus('error')
+      }
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [knowledgeGrade, preferenceReady])
+
+  const preferenceMessage = {
+    loading: 'Loading saved level...',
+    pending: 'Saving shortly...',
+    saving: 'Saving...',
+    saved: 'Saved',
+    error: preferenceError,
+  }[preferenceStatus]
 
   return (
     <main className="reader-page">
@@ -383,6 +529,36 @@ function Reader({ chapter, setReaderOpen, setPage }) {
       </header>
       <div className="reader-layout">
         <aside className="reader-tools">
+          <div className="knowledge-level">
+            <div className="knowledge-level-heading">
+              <label htmlFor="knowledge-grade">Knowledge level</label>
+              <output htmlFor="knowledge-grade">Grade {knowledgeGrade}</output>
+            </div>
+            <input
+              id="knowledge-grade"
+              type="range"
+              min="1"
+              max="12"
+              step="1"
+              value={knowledgeGrade}
+              aria-valuetext={`Grade ${knowledgeGrade}`}
+              onChange={(event) => {
+                userChangedLevel.current = true
+                setPreferenceError('')
+                setPreferenceStatus('pending')
+                setKnowledgeGrade(Number(event.target.value))
+              }}
+            />
+            <div className="knowledge-level-range"><span>Grade 1</span><span>Grade 12</span></div>
+            {preferenceMessage && (
+              <p
+                className={`knowledge-level-status${preferenceStatus === 'error' ? ' error' : ''}`}
+                role={preferenceStatus === 'error' ? 'alert' : 'status'}
+              >
+                {preferenceMessage}
+              </p>
+            )}
+          </div>
           <button type="button" className={helpOpen ? 'active' : ''} onClick={() => setHelpOpen(!helpOpen)}><CircleHelp size={19} /> Hint / Help</button>
           <button type="button" className={simplified ? 'active' : ''} onClick={() => setSimplified(!simplified)}><Lightbulb size={19} /> Simplify this</button>
           {helpOpen && <div className="mock-note"><strong>Sample hint</strong><p>This is a mock explanation. Live AI help is not connected.</p></div>}
@@ -390,20 +566,7 @@ function Reader({ chapter, setReaderOpen, setPage }) {
         </aside>
         <article className="lesson-content">
           {chapter.pdfUrl ? (
-            <section className="pdf-reader">
-              {pdfFailed ? (
-                <div className="api-state error-state">
-                  <strong>The PDF could not be loaded</strong>
-                  <p>Use the open action again or verify that the local textbook file exists.</p>
-                </div>
-              ) : (
-                <iframe
-                  src={`${chapter.pdfUrl}#toolbar=1&navpanes=0`}
-                  title={`${chapter.title} textbook PDF`}
-                  onError={() => setPdfFailed(true)}
-                />
-              )}
-            </section>
+            <PdfDocument url={chapter.pdfUrl} title={chapter.title} />
           ) : null}
           <div className="lesson-intro">
             <span className="eyebrow">CHAPTER OVERVIEW</span>

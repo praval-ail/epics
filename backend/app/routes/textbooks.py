@@ -35,4 +35,9 @@ def get_chapter(chapter_id: str):
 @router.get("/chapters/{chapter_id}/pdf")
 def get_chapter_pdf(chapter_id: str):
     pdf_path = textbooks.get_chapter_pdf_path(chapter_id)
-    return FileResponse(pdf_path, media_type="application/pdf", filename=pdf_path.name)
+    return FileResponse(
+        pdf_path,
+        media_type="application/pdf",
+        filename=pdf_path.name,
+        content_disposition_type="inline",
+    )

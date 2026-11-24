@@ -2,7 +2,8 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes.textbooks import router
+from app.routes.preferences import router as preferences_router
+from app.routes.textbooks import router as textbooks_router
 
 app = FastAPI(title="EduBridge API", version="1.0.0")
 
@@ -15,8 +16,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[origin.strip() for origin in frontend_origins],
     allow_credentials=True,
-    allow_methods=["GET"],
+    allow_methods=["GET", "PUT"],
     allow_headers=["*"],
 )
 
-app.include_router(router)
+app.include_router(textbooks_router)
+app.include_router(preferences_router)

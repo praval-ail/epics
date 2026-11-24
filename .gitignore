@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+/backend/data/understanding_level.json
+/backend/data/understanding_level.json.tmp
 
 # Editor directories and files
 .vscode/*
