@@ -14,6 +14,104 @@
               "title": "Relations and Functions",
               "description": "Explore relations, functions, and their representations.",
               "pdf_file": "class-10/mathematics/relations-and-functions.pdf"
+            },
+            {
+              "id": "class-10-math-real-numbers",
+              "number": 1,
+              "title": "Real Numbers",
+              "description": "Explore real numbers, irrational numbers, and their properties.",
+              "pdf_file": "class-10/mathematics/Real Numbers.pdf"
+            },
+            {
+              "id": "class-10-math-polynomials",
+              "number": 2,
+              "title": "Polynomials",
+              "description": "Study polynomial expressions and their zeros.",
+              "pdf_file": "class-10/mathematics/Polynomials.pdf"
+            },
+            {
+              "id": "class-10-math-pair-of-linear-equations",
+              "number": 3,
+              "title": "Pair of Linear Equations in Two Variables",
+              "description": "Explore methods for solving pairs of linear equations.",
+              "pdf_file": "class-10/mathematics/Pair Of Linear Equations In Two Variables.pdf"
+            },
+            {
+              "id": "class-10-math-quadratic-equations",
+              "number": 4,
+              "title": "Quadratic Equations",
+              "description": "Study quadratic equations and their solutions.",
+              "pdf_file": "class-10/mathematics/Quadratic Equations.pdf"
+            },
+            {
+              "id": "class-10-math-arithmetic-progressions",
+              "number": 5,
+              "title": "Arithmetic Progressions",
+              "description": "Explore sequences with a common difference.",
+              "pdf_file": "class-10/mathematics/Arithmetic Progressions.pdf"
+            },
+            {
+              "id": "class-10-math-triangles",
+              "number": 6,
+              "title": "Triangles",
+              "description": "Study triangle properties and similarity.",
+              "pdf_file": "class-10/mathematics/Triangles.pdf"
+            },
+            {
+              "id": "class-10-math-coordinate-geometry",
+              "number": 7,
+              "title": "Coordinate Geometry",
+              "description": "Use coordinates to study points and geometric relationships.",
+              "pdf_file": "class-10/mathematics/Coordinate Geometry.pdf"
+            },
+            {
+              "id": "class-10-math-introduction-to-trigonometry",
+              "number": 8,
+              "title": "Introduction to Trigonometry",
+              "description": "Learn trigonometric ratios and their relationships.",
+              "pdf_file": "class-10/mathematics/Introduction To Trigonometry.pdf"
+            },
+            {
+              "id": "class-10-math-applications-of-trigonometry",
+              "number": 9,
+              "title": "Applications of Trigonometry",
+              "description": "Apply trigonometry to problems involving heights and distances.",
+              "pdf_file": "class-10/mathematics/Applications Of Trigonometry.pdf"
+            },
+            {
+              "id": "class-10-math-circles",
+              "number": 10,
+              "title": "Circles",
+              "description": "Explore circles and their tangent properties.",
+              "pdf_file": "class-10/mathematics/Circles.pdf"
+            },
+            {
+              "id": "class-10-math-areas-related-to-circles",
+              "number": 11,
+              "title": "Areas Related to Circles",
+              "description": "Calculate areas of sectors and segments of circles.",
+              "pdf_file": "class-10/mathematics/Areas Related To Circles.pdf"
+            },
+            {
+              "id": "class-10-math-surface-areas-and-volumes",
+              "number": 12,
+              "title": "Surface Areas and Volumes",
+              "description": "Calculate surface areas and volumes of solids.",
+              "pdf_file": "class-10/mathematics/Surface Areas And Volumes.pdf"
+            },
+            {
+              "id": "class-10-math-statistics",
+              "number": 13,
+              "title": "Statistics",
+              "description": "Organize and analyze statistical data.",
+              "pdf_file": "class-10/mathematics/Statistics.pdf"
+            },
+            {
+              "id": "class-10-math-probability",
+              "number": 14,
+              "title": "Probability",
+              "description": "Explore the probability of events.",
+              "pdf_file": "class-10/mathematics/Probability.pdf"
             }
           ]
         }
